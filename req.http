@@ -1,0 +1,124 @@
+### User Register
+POST http://localhost:4000/user-api/users
+Content-Type: application/json
+
+{
+  "firstName": "abhilash",
+  "lastName": "reddy",
+  "email": "abhilash.user@example.com",
+  "password": "abhi@12345",
+  "profileImageUrl": "https://example.com/avatars/user.png"
+}
+
+### User Login
+POST http://localhost:4000/common-api/login
+Content-Type: application/json
+
+{
+  "email": "abhilash.user@example.com",
+  "password": "abhi@12345"
+}
+
+### Author Register
+POST http://localhost:4000/author-api/users
+Content-Type: application/json
+
+{
+  "firstName": "rohit",
+  "lastName": "sharms",
+  "email": "rohit.sharma@example.com",
+  "password": "rohit@12345",
+  "profileImageUrl": "https://example.com/avatars/author.png"
+}
+
+### Author Login
+POST http://localhost:4000/common-api/login
+Content-Type: application/json
+
+{
+  "email": "rohit.sharma@example.com",
+  "password": "rohit@12345",
+  "role":"AUTHOR"
+}
+
+### Create Article
+POST http://localhost:4000/author-api/articles
+Content-Type: application/json
+
+{
+  "author":"698a08804b2fc7af98be3fc5",
+  "title":"NodeJS Blog",
+  "category":"Programming",
+  "content":"This is my first article using NodeJS backend"
+}
+
+### Read Author Articles
+GET http://localhost:4000/author-api/articles/698a08804b2fc7af98be3fc5
+
+### Update Article
+PUT http://localhost:4000/author-api/articles
+Content-Type: application/json
+
+{
+  "author":"698a08804b2fc7af98be3fc5",
+  "articleId":"698a08bd4b2fc7af98be3fc9",
+  "title":"Updated NodeJS Blog",
+  "category":"Programming",
+  "content":"Updated content of the article"
+}
+
+### Read All Articles
+GET http://localhost:4000/user-api/articles
+
+### Add Comment
+PUT http://localhost:4000/user-api/comment/698a08bd4b2fc7af98be3fc9
+Content-Type: application/json
+
+{
+  "userId":"698a08744b2fc7af98be3fc2",
+  "comment":"Very helpful article!"
+}
+
+### Logout
+POST http://localhost:4000/common-api/logout
+
+### Delete Article (Soft Delete)
+DELETE http://localhost:4000/author-api/articles
+Content-Type: application/json
+
+{
+  "author":"PASTE_AUTHOR_ID_HERE",
+  "articleId":"PASTE_ARTICLE_ID_HERE"
+}
+
+
+###test 
+GET http://localhost:4000/test
+
+
+### Admin Block User
+PUT http://localhost:4000/admin-api/block
+Content-Type: application/json
+
+{
+  "userId":"698a08744b2fc7af98be3fc2"
+}
+
+
+### Admin Unblock User
+PUT http://localhost:4000/admin-api/unblock
+Content-Type: application/json
+
+{
+  "userId":"698a08744b2fc7af98be3fc2"
+}
+
+### Change Password
+PUT http://localhost:4000/common-api/change-password
+Content-Type: application/json
+
+{
+  "email":"abhilash.user@example.com",
+  "currentPassword":"abhi@12345",
+  "newPassword":"abhi@1234567"
+}
