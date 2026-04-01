@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 
 const { Schema } = mongoose;
 
-
 //USER SCHEMA 
 
 const userSchema = new Schema({
@@ -18,7 +17,10 @@ const userSchema = new Schema({
 
   email: {
     type: String,
-    required: [true, "email is required"]
+    required: [true, "email is required"],
+    unique: true,
+    lowercase: true,
+    trim: true
   },
 
   profileImageUrl: {
@@ -33,7 +35,8 @@ const userSchema = new Schema({
 
   password: {
     type: String,
-    required: [true, "password is required"]
+    required: [true, "password is required"],
+    minlength: [6, "password must contain at least 6 characters"]
   },
 
   isActive: {
@@ -46,7 +49,6 @@ const userSchema = new Schema({
   strict: "throw",
   versionKey: false
 });
-
 
 //safe export (prevents OverwriteModelError)
 export default mongoose.models.User || mongoose.model("User", userSchema);

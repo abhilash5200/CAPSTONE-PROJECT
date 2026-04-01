@@ -1,126 +1,196 @@
-import exp from "express";
-export const authorRouter = exp.Router();
+import exp from "express"
+export const authorRouter = exp.Router()
 
-import { register, authenticate } from "../services/authservice.js";
-import { verifyToken } from "../Middlewares/verifyToken.js";
-import { checkAuthor } from "../middlewares/checkAuthor.js";
-import ArticleModel from "../models/ArticalModel.js";
+import { register } from "../services/authservice.js"
+import { verifyToken } from "../Middlewares/verifyToken.js"
+import { checkAuthor } from "../middlewares/checkAuthor.js"
+import ArticleModel from "../models/ArticalModel.js"
 
-
-// REGISTER AUTHOR 
-
-//public route to register author
-authorRouter.post("/users", async (req, res) => {
-
-  //get user object from request
-  let userObj = req.body;
-
-  //call register service and force role AUTHOR
-  const newUserObj = await register({ ...userObj, role: "AUTHOR" });
-
-  //send response
-  res.status(201).json({ message: "author created", payload: newUserObj });
-});
+// ⭐ NEW IMPORTS (same as user router)
+import { upload } from "../conflict/multer.js"
+import { uploadToCloudinary } from "../conflict/cloudinaryUpload.js"
+import cloudinary from "../conflict/cloudinary.js"
 
 
-//LOGIN AUTHOR 
+// ======================================================
+// REGISTER AUTHOR WITH PROFILE IMAGE (CLOUDINARY)
+// ======================================================
 
+authorRouter.post(
+  "/users",
+  upload.single("profilePic"),   // ⭐ accept file
+  async (req, res, next) => {
 
+    let cloudinaryResult
 
+    try {
 
-//CREATE ARTICLE 
+      const userObj = req.body
 
-//protected route → only logged in author
-authorRouter.post("/articles", verifyToken, checkAuthor, async (req, res) => {
+      // ⭐ Upload image if exists
+      if (req.file) {
+        cloudinaryResult = await uploadToCloudinary(req.file.buffer)
+      }
 
-  //get article from request body
-  let article = req.body;
+      // ⭐ Register author with image URL
+      const newUserObj = await register({
+        ...userObj,
+        role: "AUTHOR",
+        profileImageUrl: cloudinaryResult?.secure_url
+      })
 
-  //create article document
-  let newArticleDoc = new ArticleModel(article);
+      res.status(201).json({
+        message: "author created",
+        payload: newUserObj
+      })
 
-  //save to database
-  let createdArticleDoc = await newArticleDoc.save();
+    } catch (err) {
 
-  //send response
-  res.status(201).json({ message: "article created", payload: createdArticleDoc });
-});
+      // ⭐ rollback if upload succeeded but DB failed
+      if (cloudinaryResult?.public_id) {
+        await cloudinary.uploader.destroy(cloudinaryResult.public_id)
+      }
 
+      next(err)
+    }
 
-//READ AUTHOR ARTICLES 
-
-//get all articles written by specific author
-authorRouter.get("/articles/:authorId", verifyToken, checkAuthor, async (req, res) => {
-
-  //get author id from params
-  let aid = req.params.authorId;
-
-  //fetch active articles
-  let articles = await ArticleModel.find({
-    author: aid,
-    isArticalActive: true
-  }).populate("author", "firstName email");
-
-  //send response
-  res.status(200).json({ message: "articles", payload: articles });
-});
-
-
-//UPDATE ARTICLE 
-
-authorRouter.put("/articles", verifyToken, checkAuthor, async (req, res) => {
-
-  //get updated fields from request
-  let { articleId, title, category, content, author } = req.body;
-
-  //check ownership of article
-  let articleOfDB = await ArticleModel.findOne({
-    _id: articleId,
-    author: author
-  });
-
-  if (!articleOfDB) {
-    return res.status(401).json({ message: "Article not found" });
   }
+)
 
-  //update article
-  let updatedArticle = await ArticleModel.findByIdAndUpdate(
-    articleId,
-    { $set: { title, category, content } },
-    { new: true }
-  );
 
-  //send response
-  res.status(200).json({ message: "article updated", payload: updatedArticle });
-});
+// ======================================================
+// CREATE ARTICLE (NO CHANGE)
+// ======================================================
 
-//delete(soft delete) article(Protected route)
-authorRouter.delete("/articles", verifyToken, checkAuthor, async (req, res) => {
+authorRouter.post(
+  "/articles",
+  verifyToken("AUTHOR"),
+  async (req, res) => {
 
-  //get article id and author id from request
-  let { articleId, author } = req.body;
+    const article = {
+      ...req.body,
+      author: req.user.userId
+    }
 
-  //check article ownership
-  let articleOfDB = await ArticleModel.findOne({
-    _id: articleId,
-    author: author
-  });
+    const newArticleDoc = new ArticleModel(article)
+    const createdArticleDoc = await newArticleDoc.save()
 
-  //if article not found or belongs to another author
-  if (!articleOfDB) {
-    return res.status(401).json({ message: "Article not found" });
+    res.status(201).json({
+      message: "article created",
+      payload: createdArticleDoc
+    })
+
   }
+)
 
-  //soft delete → mark inactive
-  let deletedArticle = await ArticleModel.findByIdAndUpdate(
-    articleId,
-    { $set: { isArticalActive: false } },
-    { new: true }
-  );
 
-  //send response
-  res.status(200).json({
-    message: "article deleted",
-    payload: deletedArticle
-  });
-});
+// ======================================================
+// READ AUTHOR ARTICLES 
+// ======================================================
+
+authorRouter.get(
+  "/articles/:authorId",
+  verifyToken("AUTHOR"),
+  checkAuthor,
+  async (req, res) => {
+    const aid = req.params.authorId
+
+    const articles = await ArticleModel.find({
+      author: aid
+    }).populate("author", "firstName email")
+
+    res.status(200).json({
+      message: "articles",
+      payload: articles
+    })
+  }
+)
+
+
+// ======================================================
+// UPDATE ARTICLE 
+// ======================================================
+
+authorRouter.put(
+  "/articles",
+  verifyToken("AUTHOR"),
+  async (req, res) => {
+
+    const { articleId, title, category, content } = req.body
+
+    const articleOfDB = await ArticleModel.findOne({
+      _id: articleId,
+      author: req.user.userId
+    })
+
+    if (!articleOfDB) {
+      return res.status(404).json({ message: "Article not found" })
+    }
+
+    const updatedArticle = await ArticleModel.findByIdAndUpdate(
+      articleId,
+      { $set: { title, category, content } },
+      { new: true }
+    )
+
+    res.status(200).json({
+      message: "article updated",
+      payload: updatedArticle
+    })
+
+  }
+)
+
+// ======================================================
+// DELETE / RESTORE ARTICLE (NO CHANGE)
+// ======================================================
+
+authorRouter.patch(
+  "/articles/:id/status",
+  verifyToken("AUTHOR"),
+  async (req, res) => {
+
+    try {
+
+      const { id } = req.params
+      const { isArticleActive } = req.body
+
+      const article = await ArticleModel.findById(id)
+
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" })
+      }
+
+      if (
+        req.user.role === "AUTHOR" &&
+        article.author.toString() !== req.user.userId
+      ) {
+        return res.status(403).json({
+          message: "Forbidden. You can only modify your own articles"
+        })
+      }
+
+      if (article.isArticleActive === isArticleActive) {
+        return res.status(400).json({
+          message: `Article is already ${
+            isArticleActive ? "active" : "deleted"
+          }`
+        })
+      }
+
+      article.isArticleActive = isArticleActive
+      await article.save()
+
+      res.status(200).json({
+        message: `Article ${
+          isArticleActive ? "restored" : "deleted"
+        } successfully`,
+        payload: article
+      })
+
+    } catch (err) {
+      res.status(500).json({ message: err.message })
+    }
+
+  }
+)

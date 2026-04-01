@@ -46,22 +46,22 @@ POST http://localhost:4000/author-api/articles
 Content-Type: application/json
 
 {
-  "author":"698a08804b2fc7af98be3fc5",
-  "title":"NodeJS Blog",
-  "category":"Programming",
-  "content":"This is my first article using NodeJS backend"
+  "author":"69ae86651e7a790569206b49",
+  "title":"commonjs",
+  "category":"Programming23",
+  "content":"This is my second article using NodeJS backend"
 }
 
 ### Read Author Articles
-GET http://localhost:4000/author-api/articles/698a08804b2fc7af98be3fc5
+GET http://localhost:4000/author-api/articles/69ae86651e7a790569206b49
 
 ### Update Article
 PUT http://localhost:4000/author-api/articles
 Content-Type: application/json
 
 {
-  "author":"698a08804b2fc7af98be3fc5",
-  "articleId":"698a08bd4b2fc7af98be3fc9",
+  "author":"69ae86651e7a790569206b49",
+  "articleId":"69afe3a1be6bb37dfae3b4c7",
   "title":"Updated NodeJS Blog",
   "category":"Programming",
   "content":"Updated content of the article"
@@ -71,24 +71,22 @@ Content-Type: application/json
 GET http://localhost:4000/user-api/articles
 
 ### Add Comment
-PUT http://localhost:4000/user-api/comment/698a08bd4b2fc7af98be3fc9
+PUT http://localhost:4000/user-api/comment/69afe3a1be6bb37dfae3b4c7
 Content-Type: application/json
 
 {
-  "userId":"698a08744b2fc7af98be3fc2",
-  "comment":"Very helpful article!"
+  "userId":"69aee834bea27ee04864c33b",
+  "comment":"Great article! Very informative."
 }
-
 ### Logout
 POST http://localhost:4000/common-api/logout
 
 ### Delete Article (Soft Delete)
-DELETE http://localhost:4000/author-api/articles
+PATCH http://localhost:4000/author-api/articles/69afe3a1be6bb37dfae3b4c7/status
 Content-Type: application/json
 
 {
-  "author":"PASTE_AUTHOR_ID_HERE",
-  "articleId":"PASTE_ARTICLE_ID_HERE"
+ "isArticalActive": true
 }
 
 

@@ -1,66 +1,111 @@
-import exp from "express";
-import { register, authenticate } from "../services/authservice.js";
-import ArticleModel from "../models/ArticalModel.js";
-import { verifyToken } from "../Middlewares/verifyToken.js";
+import exp from "express"
+import { register } from "../services/authservice.js"
+import ArticleModel from "../models/ArticalModel.js"
+import { verifyToken } from "../Middlewares/verifyToken.js"
 
-export const userRouter = exp.Router();
+import { upload } from "../conflict/multer.js"
+import { uploadToCloudinary } from "../conflict/cloudinaryUpload.js"
+import cloudinary from "../conflict/cloudinary.js"
 
+export const userRouter = exp.Router()
 
-//REGISTER USER 
+// ======================================================
+// REGISTER USER WITH PROFILE IMAGE
+// ======================================================
 
-userRouter.post("/users", async (req, res) => {
+userRouter.post(
+  "/users",
+  upload.single("profilePic"), 
+  async (req, res, next) => {
 
-  //get user object
-  let userObj = req.body;
+    let cloudinaryResult
 
-  //register with USER role
-  const newUserObj = await register({ ...userObj, role: "USER" });
+    try {
 
-  res.status(201).json({ message: "user created", payload: newUserObj });
-});
+      const userObj = req.body
 
+      //  Upload image if exists
+      if (req.file) {
+        cloudinaryResult = await uploadToCloudinary(req.file.buffer)
+      }
 
-//LOGIN USER
+      //  Register user with image URL
+      const newUserObj = await register({
+        ...userObj,
+        role: "USER",
+        profileImageUrl: cloudinaryResult?.secure_url
+      })
 
+      res.status(201).json({
+        message: "user created",
+        payload: newUserObj
+      })
 
+    } catch (err) {
 
-// READ ALL ARTICLES 
+      // rollback if upload happened but DB failed
+      if (cloudinaryResult?.public_id) {
+        await cloudinary.uploader.destroy(cloudinaryResult.public_id)
+      }
 
-userRouter.get("/articles", verifyToken, async (req, res) => {
+      next(err)
+    }
 
-  //fetch all active articles
-  let articles = await ArticleModel.find({
-    isArticalActive: true
-  }).populate("author", "firstName email profileImageUrl");
+  }
+)
 
-  res.status(200).json({ message: "All articles", payload: articles });
-});
+// ======================================================
+// READ ALL ARTICLES (NO CHANGE)
+// ======================================================
 
+userRouter.get(
+  "/articles",
+  verifyToken("USER", "AUTHOR"),
+  async (req, res) => {
 
+    const articles = await ArticleModel.find({
+      isArticleActive: true
+    }).populate("author", "firstName email profileImageUrl")
+
+    res.status(200).json({
+      message: "All articles",
+      payload: articles
+    })
+
+  }
+)
+
+// ======================================================
 // ADD COMMENT 
+// ======================================================
 
-userRouter.put("/comment/:articleId", verifyToken, async (req, res) => {
+userRouter.put(
+  "/comment/:articleId",
+  verifyToken("USER"),
+  async (req, res) => {
 
-  //get userId and comment
-  let { userId, comment } = req.body;
-  let { articleId } = req.params;
+    const { comment } = req.body
+    const { articleId } = req.params
 
-  //prepare comment object
-  let commentObj = {
-    user: userId,
-    comment: comment
-  };
+    const commentObj = {
+      user: req.user.userId,
+      comment
+    }
 
-  //push comment into article
-  let article = await ArticleModel.findByIdAndUpdate(
-    articleId,
-    { $push: { comments: commentObj } },
-    { new: true }
-  ).populate("comments.user", "firstName");
+    const article = await ArticleModel.findOneAndUpdate(
+      { _id: articleId, isArticleActive: true },
+      { $push: { comments: commentObj } },
+      { new: true, runValidators: true }
+    ).populate("comments.user", "firstName lastName profileImageUrl")
 
-  //send response
-  res.status(200).json({
-    message: "comment added",
-    payload: article
-  });
-});
+    if (!article) {
+      return res.status(404).json({ message: "Article not found" })
+    }
+
+    res.status(200).json({
+      message: "comment added",
+      payload: article
+    })
+
+  }
+)

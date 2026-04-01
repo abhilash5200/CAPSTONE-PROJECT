@@ -3,6 +3,7 @@ import { authenticate } from '../services/authservice.js'
 import { verifyToken } from '../Middlewares/verifyToken.js'
 import bcrypt from 'bcryptjs'
 import UserModel from '../models/UserModel.js'
+// import { verify } from 'jsonwebtoken'
 
 export const commonRouter=exp.Router()
 
@@ -40,7 +41,7 @@ commonRouter.post("/logout",async(req,res)=>{
 })
 
 //password update/change
-commonRouter.put('/change-password', verifyToken, async (req, res, next) => {
+commonRouter.put('/change-password', verifyToken("USER","AUTHOR","ADMIN"), async (req, res, next) => {
 
   try{
 
@@ -53,6 +54,13 @@ commonRouter.put('/change-password', verifyToken, async (req, res, next) => {
     //check email matches logged-in user
     if(email !== tokenUser.email){
       return res.status(403).json({ message: "Email does not match logged in user" });
+    }
+
+    //prevent same password
+    if(currentPassword === newPassword){
+      return res.status(400).json({
+        message: "New password must be different from current password"
+      })
     }
 
     //find user in DB
@@ -83,3 +91,25 @@ commonRouter.put('/change-password', verifyToken, async (req, res, next) => {
     next(err)
   }
 });
+
+//page refresh
+commonRouter.get(
+  "/check-auth",
+  verifyToken("USER", "AUTHOR", "ADMIN"),
+  async (req, res, next) => {
+    try {
+      const user = await UserModel.findById(req.user.userId).select("-password")
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" })
+      }
+
+      res.status(200).json({
+        message: "authenticated",
+        payload: user
+      })
+    } catch (err) {
+      next(err)
+    }
+  }
+)

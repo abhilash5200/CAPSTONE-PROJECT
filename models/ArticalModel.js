@@ -2,22 +2,16 @@ import mongoose from "mongoose";
 
 const { Schema } = mongoose;
 
-
-//COMMENT SCHEMA 
 const userCommentSchema = new Schema({
-
   user: {
     type: Schema.Types.ObjectId,
     ref: "User"
   },
-
   comment: {
     type: String
   }
 });
 
-
-//ARTICLE SCHEMA 
 const articalSchema = new Schema({
 
   author: {
@@ -43,16 +37,15 @@ const articalSchema = new Schema({
 
   comments: [userCommentSchema],
 
-  isArticalActive: {
+  isArticleActive: {
     type: Boolean,
     default: true
   }
 
 }, {
   timestamps: true,
+  strict: "throw",
   versionKey: false
 });
 
-
-//safe export
 export default mongoose.models.Artical || mongoose.model("Artical", articalSchema);
