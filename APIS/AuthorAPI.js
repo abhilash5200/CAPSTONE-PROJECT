@@ -6,7 +6,7 @@ import { verifyToken } from "../Middlewares/verifyToken.js"
 import { checkAuthor } from "../middlewares/checkAuthor.js"
 import ArticleModel from "../models/ArticalModel.js"
 
-// ⭐ NEW IMPORTS (same as user router)
+// NEW IMPORTS (same as user router)
 import { upload } from "../conflict/multer.js"
 import { uploadToCloudinary } from "../conflict/cloudinaryUpload.js"
 import cloudinary from "../conflict/cloudinary.js"
@@ -18,7 +18,7 @@ import cloudinary from "../conflict/cloudinary.js"
 
 authorRouter.post(
   "/users",
-  upload.single("profilePic"),   // ⭐ accept file
+  upload.single("profilePic"),   // 
   async (req, res, next) => {
 
     let cloudinaryResult
@@ -27,12 +27,12 @@ authorRouter.post(
 
       const userObj = req.body
 
-      // ⭐ Upload image if exists
+      // Upload image if exists
       if (req.file) {
         cloudinaryResult = await uploadToCloudinary(req.file.buffer)
       }
 
-      // ⭐ Register author with image URL
+      // Register author with image URL
       const newUserObj = await register({
         ...userObj,
         role: "AUTHOR",
@@ -46,7 +46,7 @@ authorRouter.post(
 
     } catch (err) {
 
-      // ⭐ rollback if upload succeeded but DB failed
+      // rollback if upload succeeded but DB failed
       if (cloudinaryResult?.public_id) {
         await cloudinary.uploader.destroy(cloudinaryResult.public_id)
       }
